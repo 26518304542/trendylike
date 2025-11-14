@@ -43,4 +43,4 @@ public class PaymentController {
         return service.getById(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
-//Cümle: Docker tarafını ilk defa yapıyorsan
+//Cümle: Hata özü (coffeeCold)

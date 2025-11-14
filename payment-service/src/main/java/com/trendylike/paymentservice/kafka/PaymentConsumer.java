@@ -23,7 +23,7 @@ public class PaymentConsumer {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @KafkaListener(topics = "InventoryReserved", groupId = "payment-service")
+    @KafkaListener(topics = "InventoryReserved")
     public void handleInventoryReserved(String payload){
         try{
             JsonNode node = objectMapper.readTree(payload);
@@ -35,7 +35,7 @@ public class PaymentConsumer {
             Payment payment = new Payment(orderId, amount, success ? "COMPLETED": "FAILED");
             paymentRepository.save(payment);
 
-            String event = objectMapper.writeValueAsString(Map.of("orderId", orderId, "paymentıd", payment.getId()));
+            String event = objectMapper.writeValueAsString(Map.of("orderId", orderId, "paymentId", payment.getId()));
             kafka.send(success ? "PaymentCompleted" : "PaymentFailed", event);
 
         }catch (Exception e) {
