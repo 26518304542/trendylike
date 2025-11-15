@@ -14,7 +14,7 @@ spring:
             format_sql: true
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:kafka:9092}
     consumer:
         group-id: inventory-group
         auto-offset-reset: earliest

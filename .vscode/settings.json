@@ -1,0 +1,7 @@
+{
+    "java.project.sourcePaths": [
+        "payment-service/src",
+        "inventory-service/src",
+        "order-service/src"
+    ]
+}
