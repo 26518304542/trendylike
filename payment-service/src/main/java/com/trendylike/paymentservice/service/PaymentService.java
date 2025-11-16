@@ -32,4 +32,26 @@ public class PaymentService {
     public List<Payment> getAll() {
         return repo.findAll();
     }
+
+    public Optional<Payment> updatePayment(Payment updated){
+        return repo.findById(updated.getId()).map(p -> {
+            p.setAmount(updated.getAmount());
+            p.setStatus(updated.getStatus());
+            return repo.save(p);
+        });
+    }
+
+    public Optional<Payment> completePayment(Long id){
+        return repo.findById(id).map(p-> {
+            p.setStatus("COMPLETED");
+            return repo.save(p);
+        });
+    }
+
+    public boolean deletePayment(Long id){
+        return repo.findById(id).map(p -> {
+            repo.delete(p);
+            return true;
+        }).orElse(false);
+    }
 }

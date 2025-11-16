@@ -1,43 +1,54 @@
 package com.trendylike.inventoryservice.service;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.trendylike.inventoryservice.model.Inventory;
+import com.trendylike.inventoryservice.repository.InventoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class InventoryService {public Object getAll() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAll'");
+public class InventoryService {
+
+    private final InventoryRepository repository;
+
+    public List<Inventory> getAll() {
+        return repository.findAll();
     }
 
-public Object getByProductId(Long productId) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getByProductId'");
-}
+    public Optional<Inventory> getByProductId(Long productId) {
+        return repository.findByProductId(productId);
+    }
 
-public Inventory createInventory(Inventory inventory) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'createInventory'");
-}
+    public Inventory createInventory(Inventory inv) {
+        return repository.save(inv);
+    }
 
-public Object updateInventory(Long id, Inventory inventory) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'updateInventory'");
-}
+    public Optional<Inventory> updateInventory(Long id, Inventory updated) {
+        return repository.findById(id).map(inv -> {
+            inv.setProductId(updated.getProductId());
+            inv.setAvailable(updated.getAvailable());
+            return repository.save(inv);
+        });
+    }
 
-public Object adjustAvailable(Long id, Integer adjustment) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'adjustAvailable'");
-}
+    @Transactional
+    public Optional<Inventory> adjustAvailable(Long id, Integer adjustment) {
+        return repository.findById(id).map(inv -> {
+            inv.setAvailable(inv.getAvailable() + adjustment);
+            return repository.save(inv);
+        });
+    }
 
-public boolean deleteInventory(Long id) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'deleteInventory'");
-}
-
-
-
+    public boolean deleteInventory(Long id) {
+        return repository.findById(id).map(inv -> {
+            repository.delete(inv);
+            return true;
+        }).orElse(false);
+    }
 }
