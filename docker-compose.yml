@@ -1,5 +1,9 @@
 version: "3.9"
 
+networks:
+  svcnet:
+    driver: bridge
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -8,6 +12,14 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 2181:2181
+    networks:
+      - svcnet
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc -w 5 localhost 2181 | grep imok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -17,12 +29,25 @@ services:
       - 9092:9092
       - 29092:29092
     environment:
-      KAFKA_BROKER_ID: 1
+      KAFKA_BROKER_ID: -1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # create topics at start (topic:partitions:replication)
+      KAFKA_CREATE_TOPICS: "order-created:1:1,inventory-reserved:1:1,inventory-failed:1:1,payment-completed:1:1,payment-failed:1:1"
+    networks:
+      - svcnet
+    restart: always
+    # note: confluent images include some utilities; healthcheck tries a simple broker API probe
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1'"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
 
   postgres-order:
     image: postgres:13
@@ -32,6 +57,16 @@ services:
       POSTGRES_PASSWORD: peninsula03
     ports:
       - 5432:5432
+    volumes:
+      - ./postgres/order/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - svcnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trendylike_order_dev -h localhost || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   postgres-inventory:
     image: postgres:13
@@ -41,6 +76,16 @@ services:
       POSTGRES_PASSWORD: peninsula03
     ports:
       - 5433:5432
+    volumes:
+      - ./postgres/inventory/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - svcnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trendylike_inventory_dev -h localhost || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   postgres-payment:
     image: postgres:13
@@ -50,9 +95,21 @@ services:
       POSTGRES_PASSWORD: peninsula03
     ports:
       - 5434:5432
+    volumes:
+      - ./postgres/payment/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - svcnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trendylike_payment_dev -h localhost || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   order-service:
-    build: ./order-service
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
     depends_on:
       - postgres-order
       - kafka
@@ -65,9 +122,19 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
     ports:
       - 8080:8080
+    networks:
+      - svcnet
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   inventory-service:
-    build: ./inventory-service
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
     depends_on:
       - postgres-inventory
       - kafka
@@ -80,9 +147,19 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
     ports:
       - 8081:8081
+    networks:
+      - svcnet
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   payment-service:
-    build: ./payment-service
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
     depends_on:
       - postgres-payment
       - kafka
@@ -95,3 +172,12 @@ services:
       KAFKA_BOOTSTRAP: kafka:9092
     ports:
       - 8082:8082
+    networks:
+      - svcnet
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+

@@ -69,3 +69,4 @@ public class PaymentController {
         }
     }
 }
+//Sentence, Neuntenine: PostgreSQL init SQL’leri
