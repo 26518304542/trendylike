@@ -69,4 +69,4 @@ public class PaymentController {
         }
     }
 }
-//Sentence, Neuntenine: PostgreSQL init SQL’leri
+//Sentence, Neuntenine: Sorunu net çözelim: Outbox Entity yazılacak
